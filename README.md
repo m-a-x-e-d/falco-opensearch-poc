@@ -16,15 +16,17 @@ This project creates a PoC for security monitoring environment.
    ```
 
 2. Create a `.env` file with the following variables:
+* Make sure you only change the Password, keep the rest as is (see `env.sample`).
    ```
-   OPENSEARCH_PASSWORD=your_secure_password
-   OPENSEARCH_HOST=https://opensearch-node:9200
-   HOSTNAME=your_host_name
+    OPENSEARCH_USERNAME=admin
+    OPENSEARCH_PASSWORD=<SECRET PASSWORD>
+    OPENSEARCH_HOST=https://opensearch-node:9200
+    DASHBOARDS_HOST=http://opensearch-dashboards:5601
    ```
 
-3. Start the environment:
+3. Start the environment using the `start.sh` script:
    ```bash
-   docker-compose up -d
+   ./start.sh
    ```
 
 4. Access OpenSearch Dashboards:

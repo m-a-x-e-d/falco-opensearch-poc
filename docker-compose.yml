@@ -1,0 +1,83 @@
+services:
+
+  opensearch-node:
+    image: opensearchproject/opensearch:2.19.1
+    container_name: opensearch-node
+    environment:
+      - discovery.type=single-node
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_PASSWORD}"
+    env_file: ".env"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - opensearch-data:/usr/share/opensearch/data
+    ports:
+      - "9200:9200"
+      - "9600:9600"
+
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:2.19.1
+    container_name: opensearch-dashboards
+    env_file: ".env"
+    environment:
+      - "OPENSEARCH_HOSTS=${OPENSEARCH_HOST}"
+    ports:
+      - "5601:5601"
+    depends_on:
+      - opensearch-node
+
+  init-container:
+    build:
+      context: ./init_container
+      dockerfile: Dockerfile
+    container_name: init-container
+    env_file: ".env"
+    depends_on:
+      - opensearch-node
+      - opensearch-dashboards
+
+  fluentd:
+    build:
+      context: ./fluentd
+      dockerfile: Dockerfile
+    container_name: fluentd
+    env_file: ".env"
+    ports:
+      - "24224:24224"
+      - "24224:24224/udp"
+    volumes:
+      - ./fluentd/fluent.conf:/fluentd/etc/fluent.conf
+
+  falco:
+    image: falcosecurity/falco:0.40.0
+    container_name: falco
+    env_file: ".env"
+    cap_drop:
+      - all
+    cap_add:
+      - sys_admin
+      - sys_resource
+      - sys_ptrace
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: "localhost:24224"
+        tag: "falco.event"
+    hostname: $HOSTNAME
+    entrypoint:
+      - falco
+    volumes:
+      - /var/run/docker.sock:/host/var/run/docker.sock
+      - /proc:/host/proc:ro
+      - /etc:/host/etc:ro
+      - ./falco/falco_rules.yaml:/etc/falco/falco_rules.yaml
+      - ./falco/falco.yaml:/etc/falco/falco.yaml
+    depends_on:
+      - fluentd
+
+volumes:
+  opensearch-data:
+    driver: local

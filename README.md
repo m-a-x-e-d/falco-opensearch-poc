@@ -2,6 +2,8 @@
 
 This project creates a PoC for security monitoring environment.
 
+![Dashboard View](images/image.png)
+
 ## Prerequisites
 
 - Docker and Docker Compose

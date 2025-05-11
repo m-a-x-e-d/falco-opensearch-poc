@@ -9,5 +9,5 @@
 - rule: Process Execution
   desc: Detect and log executed processes along with additional details
   condition: spawned_process and not container
-  output: (%evt.hostname %evt.source %evt.time.iso8601) (%proc.exeline %proc.name %proc.args %proc.pid %proc.pcmdline %proc.ppid %proc.cwd %proc.loginshellid) (%user.uid %user.name %user.homedir %user.shell %user.loginuid %user.loginname) (%group.gid %group.name)
+  output: (%evt.hostname %evt.source %evt.time.iso8601) (%proc.cmdline %proc.exepath %proc.args %proc.pid %proc.pcmdline %proc.pexepath %proc.ppid %proc.cwd %proc.loginshellid) (%user.uid %user.name %user.homedir %user.shell %user.loginuid %user.loginname) (%group.gid %group.name)
   priority: INFO

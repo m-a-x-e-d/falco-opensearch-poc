@@ -2,7 +2,7 @@
 
 This project creates a PoC for security monitoring environment.
 
-![Dashboard View](images/image.png)
+![Dashboard View](images/dashboard.png)
 
 ## Prerequisites
 
@@ -25,6 +25,10 @@ This project creates a PoC for security monitoring environment.
     OPENSEARCH_HOST=https://opensearch-node:9200
     DASHBOARDS_HOST=http://opensearch-dashboards:5601
    ```
+* If you are lazy just do:
+   ```bash
+   cp env.sample .env
+   ```
 
 3. Start the environment using the `start.sh` script:
    ```bash
@@ -38,6 +42,11 @@ This project creates a PoC for security monitoring environment.
    Default credentials (if not changed in environment):
    - Username: `admin`
    - Password: value of `OPENSEARCH_PASSWORD` in your `.env` file
+
+5. Shutting down OpenSearch and deleting all resources
+   ```bash
+   docker compose down --volumes
+   ```
 
 ## Architecture
 
@@ -76,5 +85,9 @@ Security features are enabled with basic authentication. The default admin passw
 Pre-configured dashboards and index patterns for both Falco events and Linux audit logs are automatically created by the init container on startup.
 
 
-## Extending
-- Work on Sigma Rules in OpenSearch to show current OpenSearch limitations
+### Security Analytics 
+
+Pre-configured Security Analytics Detector with some Linux Sigma rules automatically created by the init container on startup.
+
+
+![Security Analytics View](images/security_analytics.png)

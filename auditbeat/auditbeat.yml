@@ -1,0 +1,57 @@
+############################## Auditbeat Configuration ##############################
+
+# =========================== Modules configuration ============================
+
+auditbeat.modules:
+
+# --- Linux Audit Framework ---
+- module: auditd
+  backlog_limit: 8192
+  rate_limit: 0
+  include_raw_message: true
+  include_warnings: true
+
+  audit_rules: |
+    ## ===================== Auditd Rules =====================
+    ## Detect executions
+    -a always,exit -F arch=b64 -S execve,execveat -k exec
+    -a always,exit -F arch=b32 -S execve,execveat -k exec
+
+    ## Detect privilege escalation (setuid/setgid)
+    -a always,exit -F arch=b64 -S setuid,setgid,setresuid,setresgid -k privilege
+    -a always,exit -F arch=b32 -S setuid,setgid,setresuid,setresgid -k privilege
+
+    ## Detect file permission changes
+    -a always,exit -F arch=b64 -S chmod,fchmod,fchmodat -k chmod
+    -a always,exit -F arch=b32 -S chmod,fchmod,fchmodat -k chmod
+
+    ## Detect identity file changes
+    -w /etc/passwd -p wa -k identity
+    -w /etc/group -p wa -k identity
+    -w /etc/gshadow -p wa -k identity
+    -w /etc/shadow -p wa -k identity
+
+    ## Detect unauthorized access attempts
+    -a always,exit -F arch=b64 -S open,openat,truncate,ftruncate -F exit=-EACCES -k access
+    -a always,exit -F arch=b64 -S open,openat,truncate,ftruncate -F exit=-EPERM -k access
+
+# ============================== Processors =====================================
+
+processors:
+  # Attach process metadata (host-level)
+  - add_process_metadata:
+      match_pids: ['process.pid']
+      include_fields: ['container.id']
+      host_path: /hostfs
+
+  # Attach Docker container metadata
+  - add_docker_metadata:
+      host: "unix:///var/run/docker.sock"
+      match_fields: ['container.id']
+# ============================== Output =========================================
+
+output.console:
+  enabled: true
+  codec.json:
+    pretty: false
+    escape_html: false

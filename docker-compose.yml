@@ -38,6 +38,9 @@ services:
     depends_on:
       - opensearch-node
       - opensearch-dashboards
+    volumes:
+      - ./init_container/saved_objects/falco_indexmapping.ndjson:/app/saved_objects/falco_indexmapping.ndjson
+      - ./init_container/saved_objects/falco_dashboard.ndjson:/app/saved_objects/falco_dashboard.ndjson
 
   fluentd:
     build:
@@ -77,6 +80,35 @@ services:
       - ./falco/falco.yaml:/etc/falco/falco.yaml
     depends_on:
       - fluentd
+
+  # auditbeat:
+  #   image: docker.elastic.co/beats/auditbeat:9.2.0
+  #   container_name: auditbeat
+  #   user: root
+  #   privileged: true
+  #   network_mode: host
+  #   pid: host
+  #   cap_add:
+  #     - AUDIT_CONTROL
+  #     - AUDIT_READ
+  #   logging:
+  #     driver: "fluentd"
+  #     options:
+  #       fluentd-address: "localhost:24224"
+  #       tag: "auditbeat.event"
+  #   volumes:
+  #     - ./auditbeat/auditbeat.yml:/usr/share/auditbeat/auditbeat.yml:ro
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #     - /etc:/hostfs/etc:ro
+  #     - /proc:/hostfs/proc:ro
+  #     - /sys/fs/cgroup:/hostfs/sys/fs/cgroup:ro
+  #     - /:/hostfs:ro
+  #   command: ["-e", "--strict.perms=false"]
+  #   restart: unless-stopped
+  #   environment:
+  #     - NODE_NAME=${HOSTNAME}
+  #   depends_on:
+  #     - fluentd
 
 volumes:
   opensearch-data:

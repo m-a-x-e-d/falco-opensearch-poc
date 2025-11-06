@@ -54,61 +54,63 @@ services:
     volumes:
       - ./fluentd/fluent.conf:/fluentd/etc/fluent.conf
 
-  falco:
-    image: falcosecurity/falco:0.40.0
-    container_name: falco
-    env_file: ".env"
-    cap_drop:
-      - all
-    cap_add:
-      - sys_admin
-      - sys_resource
-      - sys_ptrace
-    logging:
-      driver: "fluentd"
-      options:
-        fluentd-address: "localhost:24224"
-        tag: "falco.event"
-    hostname: $HOSTNAME
-    entrypoint:
-      - falco
-    volumes:
-      - /var/run/docker.sock:/host/var/run/docker.sock
-      - /proc:/host/proc:ro
-      - /etc:/host/etc:ro
-      - ./falco/falco_rules.yaml:/etc/falco/falco_rules.yaml
-      - ./falco/falco.yaml:/etc/falco/falco.yaml
-    depends_on:
-      - fluentd
-
-  # auditbeat:
-  #   image: docker.elastic.co/beats/auditbeat:9.2.0
-  #   container_name: auditbeat
-  #   user: root
-  #   privileged: true
-  #   network_mode: host
-  #   pid: host
+  # falco:
+  #   image: falcosecurity/falco:0.40.0
+  #   container_name: falco
+  #   env_file: ".env"
+  #   cap_drop:
+  #     - all
   #   cap_add:
-  #     - AUDIT_CONTROL
-  #     - AUDIT_READ
+  #     - sys_admin
+  #     - sys_resource
+  #     - sys_ptrace
   #   logging:
   #     driver: "fluentd"
   #     options:
   #       fluentd-address: "localhost:24224"
-  #       tag: "auditbeat.event"
+  #       tag: "falco.event"
+  #   hostname: $HOSTNAME
+  #   entrypoint:
+  #     - falco
   #   volumes:
-  #     - ./auditbeat/auditbeat.yml:/usr/share/auditbeat/auditbeat.yml:ro
-  #     - /var/run/docker.sock:/var/run/docker.sock
-  #     - /etc:/hostfs/etc:ro
-  #     - /proc:/hostfs/proc:ro
-  #     - /sys/fs/cgroup:/hostfs/sys/fs/cgroup:ro
-  #     - /:/hostfs:ro
-  #   command: ["-e", "--strict.perms=false"]
-  #   restart: unless-stopped
-  #   environment:
-  #     - NODE_NAME=${HOSTNAME}
+  #     - /var/run/docker.sock:/host/var/run/docker.sock
+  #     - /proc:/host/proc:ro
+  #     - /etc:/host/etc:ro
+  #     - ./falco/falco_rules.yaml:/etc/falco/falco_rules.yaml
+  #     - ./falco/falco.yaml:/etc/falco/falco.yaml
   #   depends_on:
   #     - fluentd
+
+  auditbeat:
+    image: docker.elastic.co/beats/auditbeat:9.2.0
+    container_name: auditbeat
+    user: root
+    privileged: true
+    network_mode: host
+    pid: host
+    cap_add:
+      - AUDIT_CONTROL # not actually needed due to privilged 
+      - AUDIT_READ  # same 
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: "localhost:24224"
+        tag: "auditbeat.event"
+    volumes:
+      - ./auditbeat/auditbeat.yml:/usr/share/auditbeat/auditbeat.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock # this we need for docker enrichtment
+      - /etc:/hostfs/etc:ro
+      - /proc:/hostfs/proc:ro
+      - /sys/fs/cgroup:/hostfs/sys/fs/cgroup:ro
+      - /:/hostfs:ro
+      - /etc/passwd:/etc/passwd:ro # we need this for correct host user resolvement
+      - /etc/group:/etc/group:ro # and this too
+    command: ["-e", "--strict.perms=false"]
+    restart: unless-stopped
+    environment:
+      - NODE_NAME=${HOSTNAME}
+    depends_on:
+      - fluentd
 
 volumes:
   opensearch-data:

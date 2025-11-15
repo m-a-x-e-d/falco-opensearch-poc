@@ -1,6 +1,6 @@
-## Overview
+## Container Security Monitoring with OpenSearch
 
-This project creates a PoC for security monitoring environment.
+Github Repository for the OpenSearch Meetup in Vienna 
 
 ![Dashboard View](images/dashboard.png)
 
@@ -13,8 +13,8 @@ This project creates a PoC for security monitoring environment.
 
 1. Clone this repository:
    ```bash
-   git clone https://github.com/m-a-x-e-d/falco-opensearch-poc.git
-   cd falco-opensearch-poc
+   git clone https://github.com/m-a-x-e-d/container-security-with-opensearch.git
+   cd container-security-with-opensearch
    ```
 
 2. Create a `.env` file with the following variables:
@@ -25,7 +25,7 @@ This project creates a PoC for security monitoring environment.
     OPENSEARCH_HOST=https://opensearch-node:9200
     DASHBOARDS_HOST=http://opensearch-dashboards:5601
    ```
-* If you are lazy just do:
+* If you are in a rush just do:
    ```bash
    cp env.sample .env
    ```
@@ -52,11 +52,12 @@ This project creates a PoC for security monitoring environment.
 
 The solution consists of the following components:
 
-- **Falco**: Monitors system calls on the host, detecting security events based on pre-defined rules (there is only one rule, as the goal is to use Sigma rules within OpenSearch in the future)
-- **Fluentd**: Receives Falco events via Docker logging driver and forwards them to OpenSearch
+- **Falco**: Monitors system calls on the host
+- **Auditbeat**: Alertnative for monitoring system calls
+- **Fluentd**: Receives Falco and Auditbeat events via Docker logging driver and forwards them to OpenSearch
 - **OpenSearch**: Stores and indexes security event data
 - **OpenSearch Dashboards**: Provides visualization and analysis capabilities
-- **Init Container**: One-time setup container that creates necessary indices and dashboards
+- **Init Containers**: One-time setup containers that creates necessary indices, dashboards, and detectory for security analytics
 
 ## Configuration
 
@@ -82,7 +83,7 @@ Security features are enabled with basic authentication. The default admin passw
 
 ### Dashboards & Index Patterns
 
-Pre-configured dashboards and index patterns for both Falco events and Linux audit logs are automatically created by the init container on startup.
+Pre-configured dashboards and index patterns for both Falco events and Linux audit logs are automatically created by an init container on startup.
 
 
 ### Security Analytics 

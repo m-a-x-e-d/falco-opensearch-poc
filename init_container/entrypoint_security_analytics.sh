@@ -1,27 +1,34 @@
 #!/bin/bash
+echo "======================================================================"
+echo
+echo "Waiting for Falco indices (falco-*) to appear in OpenSearch..."
 
-echo "Waiting for OpenSearch Dashboards to be ready..."
-until curl -s -o /dev/null -w "%{http_code}" -u $OPENSEARCH_USERNAME:$OPENSEARCH_PASSWORD "$DASHBOARDS_HOST/api/status" | grep -q "200"; do
-  echo "Dashboards not ready yet. Retrying in 5 seconds..."
-  sleep 5
+attempts=0
+max_attempts=60  # 60 * 5s = 5 minutes
+
+until curl -s -k -u "$OPENSEARCH_USERNAME:$OPENSEARCH_PASSWORD" \
+          "$OPENSEARCH_HOST/_cat/indices/falco-*?format=json" \
+          | grep -q '"index"' ; do
+
+    echo "Falco indices not found yet. Checking again in 5 seconds..."
+    sleep 5
+    attempts=$((attempts+1))
+
+    if [ $attempts -ge $max_attempts ]; then
+        echo "ERROR: Falco indices (falco-*) never appeared in OpenSearch."
+        exit 1
+    fi
 done
 
-echo "Dashboards is ready. Loading saved objects..."
+echo "Falco indices detected. Proceeding..."
+echo "======================================================================"
+echo
 
-
-echo "Loading Dashboard (falco_dashboard.ndjson)..."
-curl -s -u $OPENSEARCH_USERNAME:$OPENSEARCH_PASSWORD \
-     -H "osd-xsrf: true" \
-     -X POST "$DASHBOARDS_HOST/api/saved_objects/_import?overwrite=true" \
-     -F "file=@/app/saved_objects/falco_dashboard.ndjson"
-
-echo "Dashboard loaded successfully."
-
-
-echo "Loading Falco Sigma Mapping"
-
-curl -s -k -u $OPENSEARCH_USERNAME:$OPENSEARCH_PASSWORD \
-     -XPOST "https://opensearch-node:9200/_plugins/_security_analytics/mappings" -H 'Content-Type: application/json' -d'
+echo "Loading Falco Sigma Mapping..."
+curl -s -k -u "$OPENSEARCH_USERNAME:$OPENSEARCH_PASSWORD" \
+     -X POST "$OPENSEARCH_HOST/_plugins/_security_analytics/mappings" \
+     -H 'Content-Type: application/json' \
+     -d '
 {
   "index_name": "falco-*",
    "rule_topic": "linux",
@@ -80,11 +87,15 @@ curl -s -k -u $OPENSEARCH_USERNAME:$OPENSEARCH_PASSWORD \
     }
 
 }'
-
-echo "Loading Linux Sigma Detector"
-
-curl -s -k -u $OPENSEARCH_USERNAME:$OPENSEARCH_PASSWORD \
-     -X POST "https://opensearch-node:9200/_plugins/_security_analytics/detectors" -H 'Content-Type: application/json' -d'
+echo
+echo "Falco Sigma Mapping loaded."
+echo "======================================================================"
+echo
+echo "Loading Linux Sigma Detector..."
+curl -s -k -u "$OPENSEARCH_USERNAME:$OPENSEARCH_PASSWORD" \
+     -X POST "$OPENSEARCH_HOST/_plugins/_security_analytics/detectors" \
+     -H 'Content-Type: application/json' \
+     -d '
 {
     "name": "Linux Audit Detector",
     "detector_type": "linux",
@@ -100,7 +111,7 @@ curl -s -k -u $OPENSEARCH_USERNAME:$OPENSEARCH_PASSWORD \
         "detector_input": {
           "description": "",
           "indices": [
-            "falco-*"
+            "falco-alerts"
           ],
           "custom_rules": [],
           "pre_packaged_rules": [
@@ -164,3 +175,9 @@ curl -s -k -u $OPENSEARCH_USERNAME:$OPENSEARCH_PASSWORD \
       }
     ]
 }'
+echo
+echo "Linux Sigma Detector loaded."
+echo "======================================================================"
+echo
+echo "Initialization completed successfully."
+exit 0

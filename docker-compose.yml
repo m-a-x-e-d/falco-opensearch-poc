@@ -29,18 +29,18 @@ services:
     depends_on:
       - opensearch-node
 
-  init-container:
+  init-container-main:
     build:
       context: ./init_container
       dockerfile: Dockerfile
-    container_name: init-container
+    container_name: init-container-main
     env_file: ".env"
     depends_on:
       - opensearch-node
       - opensearch-dashboards
     volumes:
-      - ./init_container/saved_objects/falco_indexmapping.ndjson:/app/saved_objects/falco_indexmapping.ndjson
-      - ./init_container/saved_objects/falco_dashboard.ndjson:/app/saved_objects/falco_dashboard.ndjson
+      - ./init_container/saved_objects:/app/saved_objects
+    restart: "no"
 
   fluentd:
     build:
@@ -53,33 +53,36 @@ services:
       - "24224:24224/udp"
     volumes:
       - ./fluentd/fluent.conf:/fluentd/etc/fluent.conf
+    depends_on:
+      init-container-main:
+        condition: service_completed_successfully
 
-  # falco:
-  #   image: falcosecurity/falco:0.40.0
-  #   container_name: falco
-  #   env_file: ".env"
-  #   cap_drop:
-  #     - all
-  #   cap_add:
-  #     - sys_admin
-  #     - sys_resource
-  #     - sys_ptrace
-  #   logging:
-  #     driver: "fluentd"
-  #     options:
-  #       fluentd-address: "localhost:24224"
-  #       tag: "falco.event"
-  #   hostname: $HOSTNAME
-  #   entrypoint:
-  #     - falco
-  #   volumes:
-  #     - /var/run/docker.sock:/host/var/run/docker.sock
-  #     - /proc:/host/proc:ro
-  #     - /etc:/host/etc:ro
-  #     - ./falco/falco_rules.yaml:/etc/falco/falco_rules.yaml
-  #     - ./falco/falco.yaml:/etc/falco/falco.yaml
-  #   depends_on:
-  #     - fluentd
+  falco:
+    image: falcosecurity/falco:0.40.0
+    container_name: falco
+    env_file: ".env"
+    cap_drop:
+      - all
+    cap_add:
+      - sys_admin
+      - sys_resource
+      - sys_ptrace
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: "localhost:24224"
+        tag: "falco.event"
+    hostname: $HOSTNAME
+    entrypoint:
+      - falco
+    volumes:
+      - /var/run/docker.sock:/host/var/run/docker.sock
+      - /proc:/host/proc:ro
+      - /etc:/host/etc:ro
+      - ./falco/falco_rules.yaml:/etc/falco/falco_rules.yaml
+      - ./falco/falco.yaml:/etc/falco/falco.yaml
+    depends_on:
+      - fluentd
 
   auditbeat:
     image: docker.elastic.co/beats/auditbeat:9.2.0
@@ -111,6 +114,20 @@ services:
       - NODE_NAME=${HOSTNAME}
     depends_on:
       - fluentd
+
+  init-container-security-analytics:
+    build:
+      context: ./init_container
+      dockerfile: Dockerfile
+    container_name: init-container-security-analytics
+    env_file: ".env"
+    entrypoint: ["/app/entrypoint_security_analytics.sh"]
+    restart: "no"
+    depends_on:
+      falco:
+        condition: service_started
+      fluentd:
+        condition: service_started
 
 volumes:
   opensearch-data:
